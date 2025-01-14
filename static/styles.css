@@ -333,3 +333,11 @@ header .search-wrapper .suggestion:hover {
   66% { background-color: #eb3b13; }
   100% { background-color: transparent; }
 }
+
+#map {
+  height: 300px; /* You can adjust the height as needed */
+  width: 100%;   /* Make the map responsive to the container width */
+  border-radius: 10px; /* Optional: rounded corners for the map */
+  margin-top: 20px;    /* Optional: spacing above the map */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Optional: subtle shadow */
+}

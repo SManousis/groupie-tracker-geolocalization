@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Groupie Tracker</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <link 
+    rel="stylesheet" 
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+    integrity="sha256-..." 
+    crossorigin=""
+  >
 </head>
 <body>
     <header>
@@ -23,10 +29,11 @@
           
     </header>
     
-    
+    <div id="mapid"></div>
     <main id="band-container">
         <!-- Cards will be dynamically injected here -->
     </main>
+
     <script>
         window.artistData = [
         {{range $index, $artist := .Artists}}{{if $index}}, {{end}}{
@@ -48,7 +55,13 @@
         }{{end}}
         ];
     </script>
+     <script 
+     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+     integrity="sha256-..." 
+     crossorigin=""
+   ></script>
     <script src="/static/app.js" defer></script>
+    
     <footer>
         <p>Groupie Tracker - All Rights Reserved &copy; 2024</p>
     </footer>

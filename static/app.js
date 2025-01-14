@@ -32,15 +32,12 @@ function expandCard(artist) {
     return;
   }
 
-  // Log events to check its structure
-  console.log("Artist Events:", artist.events);
-
   // Create an overlay to dim the background
   const overlay = document.createElement('div');
   overlay.className = 'overlay';
   overlay.addEventListener('click', closeExpandedView);
 
-  // Create the expanded card
+  // Create the expanded card with the map div added
   const expandedCard = document.createElement('div');
   expandedCard.className = 'expanded-card';
   expandedCard.innerHTML = `
@@ -54,6 +51,10 @@ function expandCard(artist) {
       <ul>
         ${Object.entries(artist.events).map(([event, location]) => `<li><strong>${event}:</strong> ${location}</li>`).join('')}
       </ul>
+      
+      <!-- Map Container Added Here -->
+      <h3>Concert Locations</h3>
+      <div id="mapid"></div>
     </div>
     <div class="sidebar-right" style="background-image: url('${artist.image}');"></div>
     <button class="close-btn">Close</button>
@@ -67,7 +68,10 @@ function expandCard(artist) {
   document.body.appendChild(expandedCard);
 
   // Add animation to expand the card
-  setTimeout(() => expandedCard.classList.add('expanded'), 10); // Add animation after a slight delay
+  setTimeout(() => expandedCard.classList.add('expanded'), 10);
+
+  // Initialize the map once the card is shown
+  loadMap(artist.name);
 }
 
 // Function to close the expanded view
@@ -252,6 +256,39 @@ inputBar.addEventListener('input', function () {
     clearBtn.style.display = 'none';
   }
 });
+
+function loadMap(artistName) {
+  // Fetch geolocations from the backend
+  fetch(`/geolocalization?q=${encodeURIComponent(artistName)}`)
+    .then(response => response.json())
+    .then(locations => {
+      // Initialize the map in the "mapid" div
+      const map = L.map('mapid').setView([0, 0], 2);
+
+      // Add the tile layer (OpenStreetMap)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      // Add markers for each concert location
+      locations.forEach(location => {
+        const { lat, lon, location: locName } = location;
+
+        L.marker([lat, lon])
+          .addTo(map)
+          .bindPopup(`<b>${locName}</b>`);
+      });
+
+      // Adjust map to fit all markers
+      const bounds = locations.map(loc => [loc.lat, loc.lon]);
+      if (bounds.length > 0) {
+        map.fitBounds(bounds);
+      }
+    })
+    .catch(error => {
+      console.error('Error loading map locations:', error);
+    });
+}
 
 var selectedValue;
 
