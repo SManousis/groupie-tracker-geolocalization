@@ -128,7 +128,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Prepare the template with embedded JavaScript
-	tmpl, err := template.ParseFiles("templates/index.html")
+	tmpl, err := template.New("index.html").ParseFiles("templates/index.html")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error parsing template: %v", err), http.StatusInternalServerError)
 		return
@@ -148,7 +148,7 @@ func main() {
 
 	// Serve the homepage on /
 	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/geolocalization", geolocalizationHandler)
+
 	http.HandleFunc("/search", searchHandler)
 	http.HandleFunc("/result", resultHome)
 	// Get port from environment variable or default to 8080
@@ -175,7 +175,6 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var list []string
-	var matchingArtists []Artist
 	var Bands []Artist
 
 	// Fetch the list of artists
@@ -184,7 +183,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Error fetching artists:", err)
 	}
 
-	// Check if the search query matches an artist's name, album, creation date, etc.
+	// Check if the search query matches any details
 	for _, v := range Bands {
 		// Search by artist name
 		if strings.Contains(strings.ToLower(v.Name), query) {
@@ -194,15 +193,14 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		// Search by band members
 		for _, member := range v.Members {
 			if strings.Contains(strings.ToLower(member), query) {
-				list = append(list, member+" - member")
+				list = append(list, member+" - member of "+v.Name)
 			}
 		}
 
 		// Now check for location-based search separately
 		for _, location := range v.Locations {
 			if strings.Contains(strings.ToLower(location), query) {
-				// Collect artists performing in the location and include the location in the result
-				matchingArtists = append(matchingArtists, v)
+				list = append(list, v.Name+" - artist/band in location: "+location)
 			}
 		}
 
@@ -217,21 +215,82 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// If there are location matches, add them to the list as well with the location info
-	if len(matchingArtists) > 0 {
-		for _, artist := range matchingArtists {
-			for _, location := range artist.Locations {
-				if strings.Contains(strings.ToLower(location), query) {
-					// Add the location to the result as well
-					list = append(list, artist.Name+" - artist/band in location: "+location)
+	// Return the list of suggestions as JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(list)
+}
+
+func resultHome(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var data struct {
+		Query string `json:"query"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	// Extract the main query
+	parts := strings.Split(data.Query, " - ")
+	query := parts[0]
+	relatedInfo := ""
+	if len(parts) > 1 {
+		relatedInfo = parts[1] // This will capture "member of <band>" or other info
+	}
+	queryLower := strings.ToLower(query)
+
+	var Bands []Artist
+	err := FetchArtists(&Bands)
+	if err != nil {
+		fmt.Println("Error fetching artists:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	var matchedArtist *Artist
+OuterLoop:
+	for _, v := range Bands {
+		// Check if the query matches the band or solo artist directly
+		if strings.ToLower(v.Name) == queryLower ||
+			strings.ToLower(strconv.Itoa(v.CreationDate)) == queryLower ||
+			strings.ToLower(v.FirstAlbum) == queryLower {
+			matchedArtist = &v
+			break OuterLoop
+		}
+
+		// If the query matches a band member, ensure we match the correct band
+		for _, member := range v.Members {
+			if strings.ToLower(member) == queryLower {
+				if relatedInfo != "" && strings.Contains(strings.ToLower(relatedInfo), strings.ToLower(v.Name)) {
+					matchedArtist = &v
+					break OuterLoop
 				}
+			}
+		}
+
+		// Check for exact matches for locations or other criteria
+		for _, location := range v.Locations {
+			if strings.ToLower(location) == queryLower {
+				matchedArtist = &v
+				break OuterLoop
 			}
 		}
 	}
 
-	// Return the list of suggestions as JSON
+	// If no match found, return error
+	if matchedArtist == nil {
+		http.Error(w, "No artist found", http.StatusNotFound)
+		return
+	}
+
+	// Return the matched artist's information as JSON
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(list)
+	json.NewEncoder(w).Encode(matchedArtist)
 }
 
 func findMatchedArtist(query string) (*Artist, error) {
@@ -264,42 +323,6 @@ func findMatchedArtist(query string) (*Artist, error) {
 	}
 
 	return nil, nil
-}
-
-func resultHome(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var data struct {
-		Query string `json:"query"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
-
-	// Extract query from the user input
-	parts := strings.Split(data.Query, " - ")
-	query := parts[0]
-
-	// Find the matched artist
-	matchedArtist, err := findMatchedArtist(query)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error finding artist: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	if matchedArtist == nil {
-		http.Error(w, "No artist found", http.StatusNotFound)
-		return
-	}
-
-	// Return the matched artist as JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(matchedArtist)
 }
 
 func geolocalizationHandler(w http.ResponseWriter, r *http.Request) {
