@@ -334,10 +334,34 @@ header .search-wrapper .suggestion:hover {
   100% { background-color: transparent; }
 }
 
+.map-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
 #mapid {
-  height: 200px; /* You can adjust the height as needed */
-  width: 50%;   /* Make the map responsive to the container width */
+  height: 300px; /* You can adjust the height as needed */
+  width: 40%;   /* Make the map responsive to the container width */
+  align-self: center;
   border-radius: 10px; /* Optional: rounded corners for the map */
   margin-top: 20px;    /* Optional: spacing above the map */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Optional: subtle shadow */
+}
+
+.connect-btn {
+  padding: 10px 20px;
+  margin-left: 20px;
+  font-size: 16px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.connect-btn:hover {
+  background-color: #2980b9;
 }

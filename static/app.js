@@ -54,7 +54,10 @@ function expandCard(artist) {
       
       <!-- Map Container Added Here -->
       <h3>Concert Locations</h3>
-      <div id="mapid"></div>
+       <div class="map-container">
+        <div id="mapid"></div>
+        <button id="connect-btn" class="connect-btn">Connect Locations</button>
+      </div>
     </div>
     <div class="sidebar-right" style="background-image: url('${artist.image}');"></div>
     <button class="close-btn">Close</button>
@@ -257,48 +260,73 @@ inputBar.addEventListener('input', function () {
   }
 });
 let map;
+let markers = [];  // Store markers globally
+let polyline;      // Store the line
+
 function loadMap(artistName) {
   if (map) {
-    map.remove();  // Destroy the previous map instance
-  }// Fetch geolocations from the backend
+    map.remove();  // Reset previous map
+  }
+
   fetch(`/geolocalization?q=${encodeURIComponent(artistName)}`)
-  .then(response => {
-    if (!response.ok) {
-      // We'll read the text/HTML body *instead* of .json()
-      return response.text().then(text => {
-        throw new Error(`Error ${response.status}: ${text}`);
-      });
-    }
-    return response.json();
-  })
+    .then(response => {
+      if (!response.ok) {
+        return response.text().then(text => {
+          throw new Error(`Error ${response.status}: ${text}`);
+        });
+      }
+      return response.json();
+    })
     .then(locations => {
-      // Initialize the map in the "mapid" div
       map = L.map('mapid').setView([0, 0], 2);
 
-      // Add the tile layer (OpenStreetMap)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // Add markers for each concert location
+      markers = [];  // Clear previous markers
+
       locations.forEach(location => {
         const { lat, lon, location: locName } = location;
 
-        L.marker([lat, lon])
+        const marker = L.marker([lat, lon])
           .addTo(map)
           .bindPopup(`<b>${locName}</b>`);
+        
+        markers.push(marker);
       });
 
-      // Adjust map to fit all markers
       const bounds = locations.map(loc => [loc.lat, loc.lon]);
       if (bounds.length > 0) {
         map.fitBounds(bounds);
       }
+
+      // Add button functionality
+      document.getElementById('connect-btn').addEventListener('click', connectLocations);
     })
     .catch(error => {
       console.error('Error loading map locations:', error);
     });
-} 
+}
+
+// Function to draw a line connecting the locations
+function connectLocations() {
+  if (polyline) {
+    map.removeLayer(polyline);  // Remove existing line if any
+  }
+
+  let latlngs = markers.map(marker => marker.getLatLng());
+
+  // Close the loop by connecting the last point to the first
+  if (latlngs.length > 2) {
+    latlngs.push(latlngs[0]);  // Connect back to the first point
+  }
+
+  polyline = L.polyline(latlngs, { color: 'red' }).addTo(map);
+
+  // Zoom the map to fit the connected line
+  map.fitBounds(polyline.getBounds());
+}
 
 var selectedValue;
 
