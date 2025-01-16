@@ -334,9 +334,9 @@ header .search-wrapper .suggestion:hover {
   100% { background-color: transparent; }
 }
 
-#map {
+#mapid {
   height: 200px; /* You can adjust the height as needed */
-  width: 100%;   /* Make the map responsive to the container width */
+  width: 50%;   /* Make the map responsive to the container width */
   border-radius: 10px; /* Optional: rounded corners for the map */
   margin-top: 20px;    /* Optional: spacing above the map */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Optional: subtle shadow */
