@@ -335,7 +335,7 @@ header .search-wrapper .suggestion:hover {
 }
 
 #map {
-  height: 300px; /* You can adjust the height as needed */
+  height: 200px; /* You can adjust the height as needed */
   width: 100%;   /* Make the map responsive to the container width */
   border-radius: 10px; /* Optional: rounded corners for the map */
   margin-top: 20px;    /* Optional: spacing above the map */

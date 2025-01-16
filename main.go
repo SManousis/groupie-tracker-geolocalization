@@ -148,7 +148,7 @@ func main() {
 
 	// Serve the homepage on /
 	http.HandleFunc("/", serveHome)
-
+	http.HandleFunc("/geolocalization", geolocalizationHandler)
 	http.HandleFunc("/search", searchHandler)
 	http.HandleFunc("/result", resultHome)
 	// Get port from environment variable or default to 8080
@@ -331,7 +331,7 @@ func geolocalizationHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing search query", http.StatusBadRequest)
 		return
 	}
-
+	fmt.Println("Geolocation request received for:", query)
 	// Find the matched artist
 	matchedArtist, err := findMatchedArtist(query)
 	if err != nil {
@@ -343,13 +343,15 @@ func geolocalizationHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No artist found", http.StatusNotFound)
 		return
 	}
-
+	fmt.Println("Matched artist:", matchedArtist.Name)
+	fmt.Println("Artist locations:", matchedArtist.Locations)
 	// Process the artist's locations
 	uniqueLocations := make(map[string]bool)
 	var locations []string
 	for _, location := range matchedArtist.Locations {
 		editedLocation := strings.ReplaceAll(location, "_", " ")
 		formattedLocation := strings.ReplaceAll(editedLocation, "-", ", ")
+
 		if !uniqueLocations[formattedLocation] {
 			uniqueLocations[formattedLocation] = true
 			locations = append(locations, formattedLocation)
@@ -365,13 +367,13 @@ func geolocalizationHandler(w http.ResponseWriter, r *http.Request) {
 	var results []GeocodedLocation
 
 	for i := range locations {
-		url := fmt.Sprintf(
-			"https://api.geoapify.com/v1/geocode/search?text=%s&apiKey=YOUR_API_KEY",
+		geoURL := fmt.Sprintf(
+			"https://api.geoapify.com/v1/geocode/search?text=%s&apiKey=c62505595d2745efb44a0e32dc6e86bb",
 			url.QueryEscape(locations[i]),
 		)
-
+		fmt.Println("Geoapify Request URL:", geoURL)
 		client := &http.Client{}
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequest("GET", geoURL, nil)
 		if err != nil {
 			fmt.Println("Error creating request:", err)
 			continue

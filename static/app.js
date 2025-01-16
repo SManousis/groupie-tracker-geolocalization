@@ -68,10 +68,10 @@ function expandCard(artist) {
   document.body.appendChild(expandedCard);
 
   // Add animation to expand the card
-  setTimeout(() => expandedCard.classList.add('expanded'), 10);
-
-  // Initialize the map once the card is shown
-  loadMap(artist.name);
+  setTimeout(() => {
+    expandedCard.classList.add('expanded');
+    loadMap(artist.name);  // Load map here
+  }, 10);
 }
 
 // Function to close the expanded view
@@ -256,14 +256,24 @@ inputBar.addEventListener('input', function () {
     clearBtn.style.display = 'none';
   }
 });
-
+let map;
 function loadMap(artistName) {
-  // Fetch geolocations from the backend
+  if (map) {
+    map.remove();  // Destroy the previous map instance
+  }// Fetch geolocations from the backend
   fetch(`/geolocalization?q=${encodeURIComponent(artistName)}`)
-    .then(response => response.json())
+  .then(response => {
+    if (!response.ok) {
+      // We'll read the text/HTML body *instead* of .json()
+      return response.text().then(text => {
+        throw new Error(`Error ${response.status}: ${text}`);
+      });
+    }
+    return response.json();
+  })
     .then(locations => {
       // Initialize the map in the "mapid" div
-      const map = L.map('mapid').setView([0, 0], 2);
+      map = L.map('mapid').setView([0, 0], 2);
 
       // Add the tile layer (OpenStreetMap)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -288,7 +298,7 @@ function loadMap(artistName) {
     .catch(error => {
       console.error('Error loading map locations:', error);
     });
-}
+} 
 
 var selectedValue;
 
