@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 )
 
 type SearchResult struct {
@@ -346,15 +348,50 @@ func geolocalizationHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Matched artist:", matchedArtist.Name)
 	fmt.Println("Artist locations:", matchedArtist.Locations)
 	// Process the artist's locations
+	// 1. Pair Dates with Locations
+	type LocationDate struct {
+		Location string
+		Date     time.Time
+	}
+
+	var locationDates []LocationDate
+	layout := "02-01-2006" // Assuming the dates are in "DD-MM-YYYY" format
+
+	for i, location := range matchedArtist.Locations {
+		if i < len(matchedArtist.Dates) {
+			// Clean the date string by trimming unwanted characters (like '*')
+			cleanedDate := strings.TrimSpace(matchedArtist.Dates[i])
+			cleanedDate = strings.TrimPrefix(cleanedDate, "*") // Remove '*' if present
+
+			parsedDate, err := time.Parse(layout, cleanedDate)
+			if err != nil {
+				fmt.Println("Error parsing date:", cleanedDate, err)
+				continue
+			}
+
+			locationDates = append(locationDates, LocationDate{
+				Location: location,
+				Date:     parsedDate,
+			})
+		}
+	}
+
+	// 2. Sort Locations by Parsed Dates
+	sort.Slice(locationDates, func(i, j int) bool {
+		return locationDates[i].Date.Before(locationDates[j].Date)
+	})
+
+	// 3. Process Sorted Locations
 	uniqueLocations := make(map[string]bool)
-	var locations []string
-	for _, location := range matchedArtist.Locations {
-		editedLocation := strings.ReplaceAll(location, "_", " ")
+	var sortedLocations []string
+
+	for _, ld := range locationDates {
+		editedLocation := strings.ReplaceAll(ld.Location, "_", " ")
 		formattedLocation := strings.ReplaceAll(editedLocation, "-", ", ")
 
 		if !uniqueLocations[formattedLocation] {
 			uniqueLocations[formattedLocation] = true
-			locations = append(locations, formattedLocation)
+			sortedLocations = append(sortedLocations, formattedLocation)
 		}
 	}
 
@@ -366,10 +403,10 @@ func geolocalizationHandler(w http.ResponseWriter, r *http.Request) {
 
 	var results []GeocodedLocation
 
-	for i := range locations {
+	for i := range sortedLocations {
 		geoURL := fmt.Sprintf(
 			"https://api.geoapify.com/v1/geocode/search?text=%s&apiKey=c62505595d2745efb44a0e32dc6e86bb",
-			url.QueryEscape(locations[i]),
+			url.QueryEscape(sortedLocations[i]),
 		)
 		fmt.Println("Geoapify Request URL:", geoURL)
 		client := &http.Client{}
@@ -410,12 +447,12 @@ func geolocalizationHandler(w http.ResponseWriter, r *http.Request) {
 			lat := geoResponse.Features[0].Geometry.Coordinates[1]
 			lon := geoResponse.Features[0].Geometry.Coordinates[0]
 			results = append(results, GeocodedLocation{
-				Location: locations[i],
+				Location: sortedLocations[i],
 				Lat:      lat,
 				Lon:      lon,
 			})
 		} else {
-			fmt.Printf("No coordinates found for location: %s\n", locations[i])
+			fmt.Printf("No coordinates found for location: %s\n", sortedLocations[i])
 		}
 	}
 

@@ -317,10 +317,7 @@ function connectLocations() {
 
   let latlngs = markers.map(marker => marker.getLatLng());
 
-  // Close the loop by connecting the last point to the first
-  if (latlngs.length > 2) {
-    latlngs.push(latlngs[0]);  // Connect back to the first point
-  }
+ 
 
   polyline = L.polyline(latlngs, { color: 'red' }).addTo(map);
 
