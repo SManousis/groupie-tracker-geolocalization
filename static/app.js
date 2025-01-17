@@ -53,14 +53,15 @@ function expandCard(artist) {
       </ul>
       
       <!-- Map Container Added Here -->
-      <h3>Concert Locations</h3>
+      <h4>Concert Locations</h4>
        <div class="map-container">
         <div id="mapid"></div>
         <button id="connect-btn" class="connect-btn">Connect Locations</button>
+        <button class="close-btn">Close</button>
       </div>
     </div>
     <div class="sidebar-right" style="background-image: url('${artist.image}');"></div>
-    <button class="close-btn">Close</button>
+    
   `;
 
   // Add close button functionality
@@ -307,6 +308,9 @@ function loadMap(artistName) {
     .catch(error => {
       console.error('Error loading map locations:', error);
     });
+    setTimeout(() => {
+      map.invalidateSize();  // Force the map to resize properly
+    }, 300);
 }
 
 // Function to draw a line connecting the locations
