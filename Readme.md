@@ -63,6 +63,8 @@ Groupie Tracker is a web application that retrieves data from an external API co
     Frontend Visualizations:
         The artist data is visually presented as cards, which can include additional details such as concert dates and locations.
         You can customize how you display data by modifying the frontend JavaScript and HTML templates.
+    Geolocalization: 
+        The map is presenting the locations of the feautered concerts and with the connect location button, the user can see the connections of the locations starting from the first concert up to the last one with chronological order
 
 ## Testing
 
